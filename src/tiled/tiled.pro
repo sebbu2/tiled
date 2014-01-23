@@ -153,7 +153,9 @@ SOURCES += aboutdialog.cpp \
     utils.cpp \
     varianteditorfactory.cpp \
     variantpropertymanager.cpp \
-    zoomable.cpp
+    zoomable.cpp \
+    tileanimationeditor.cpp \
+    changetileanimation.cpp
 
 HEADERS += aboutdialog.h \
     abstractobjecttool.h \
@@ -272,7 +274,9 @@ HEADERS += aboutdialog.h \
     utils.h \
     varianteditorfactory.h \
     variantpropertymanager.h \
-    zoomable.h
+    zoomable.h \
+    tileanimationeditor.h \
+    changetileanimation.h
 
 macx {
     OBJECTIVE_SOURCES += macsupport.mm
@@ -287,7 +291,8 @@ FORMS += aboutdialog.ui \
     preferencesdialog.ui \
     resizedialog.ui \
     saveasimagedialog.ui\
-    editterraindialog.ui
+    editterraindialog.ui \
+    tileanimationeditor.ui
 
 icon32.path = $${PREFIX}/share/icons/hicolor/32x32/apps/
 icon32.files += images/32x32/tiled.png
