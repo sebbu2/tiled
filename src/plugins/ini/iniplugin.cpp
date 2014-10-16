@@ -144,50 +144,48 @@ bool IniPlugin::process_line(Tiled::Map *map, QStringList path, QString value) {
 			else if(path[1]=="tileset") {
 				assert(path.size()>=4);
 				int i=path[2].toInt();
-				if(i>map->tilesetCount()) {
-					//map->addTileset(new Tiled::Tileset("",0,0));//do it later
+				while(i>map->tilesetCount()) {
+					map->addTileset(new Tiled::Tileset("",0,0));
 					t_firstgid=0;
-					t_name="";
-					t_tilewidth=0;
-					t_tileheight=0;
-					t_spacing=0;
-					t_margin=0;//*/
 				}
 				if(path.size()==4) { //tileset attributes
 					if(path[3]=="firstgid") {
-						//t_firstgid=value.toInt();
+						t_firstgid=value.toInt();
 					}
 					else if(path[3]=="name") {
-						t_name=value;
-						//map->tilesetAt(i)->setName(value);
+						map->tilesetAt(i)->setName(value);
 					}
 					else if(path[3]=="tilewidth") {
-						t_tilewidth=value.toInt();
-						//map->tilesetAt(i)->mTileWidth=value.toInt();
+						bool ok;
+						int v=value.toInt(&ok);
+						assert(ok);
+						map->tilesetAt(i)->setTileWidth(v);
 					}
 					else if(path[3]=="tileheight") {
-						t_tileheight=value.toInt();
-						//map->tilesetAt(i)->mTileHeight=value.toInt();
+						bool ok;
+						int v=value.toInt(&ok);
+						assert(ok);
+						map->tilesetAt(i)->setTileHeight(v);
 					}
 					else if(path[3]=="spacing") {
-						t_spacing=value.toInt();
-						//map->tilesetAt(i)->mTileSpacing=value.toInt();
+						bool ok;
+						int v=value.toInt(&ok);
+						assert(ok);
+						map->tilesetAt(i)->setTileSpacing(v);
 					}
 					else if(path[3]=="margin") {
-						t_margin=value.toInt();
-						//map->tilesetAt(i)->mMargin=value.toInt();
+						bool ok;
+						int v=value.toInt(&ok);
+						assert(ok);
+						map->tilesetAt(i)->setMargin(v);
 					}
 					else if(path[3]=="source") {
-						if(i>map->tilesetCount()) {
-							map->addTileset(new Tiled::Tileset(t_name, t_tilewidth, t_tileheight, t_spacing, t_margin));
-						}//*/
 						map->tilesetAt(i)->setFileName(value);
 					}
 				}
 				else if(path.size()==5) {
 					if(path[3]=="image") { //tileset image
 						if(path[4]=="source") {
-							//map->tilesetAt(i)->mImageSource=value;
 							map->tilesetAt(i)->loadFromImage(value);
 						}
 						else if(path[4]=="trans") {
@@ -196,22 +194,31 @@ bool IniPlugin::process_line(Tiled::Map *map, QStringList path, QString value) {
 							map->tilesetAt(i)->setTransparentColor(v);
 						}
 						else if(path[4]=="width") {
-							//map->tilesetAt(i)->mImageWidth=value;//NOTE: loadFromImage
+							bool ok;
+							int v=value.toInt(&ok);
+							assert(ok);
+							map->tilesetAt(i)->setImageWidth(v);//NOTE: loadFromImage
 						}
 						else if(path[4]=="height") {
-							//map->tilesetAt(i)->mImageHeight=value;//NOTE: loadFromImage
+							bool ok;
+							int v=value.toInt(&ok);
+							assert(ok);
+							map->tilesetAt(i)->setImageHeight(v);//NOTE: loadFromImage
 						}
 					}
 					if(path[3]=="tileoffset") {
 						if(path[4]=="x") {
-							//map->tilesetAt(i)->mTileOffset.setX(value.toInt());
-							//t_to_x=value.toInt();
+							bool ok;
+							int v=value.toInt(&ok);
+							assert(ok);
+							map->tilesetAt(i)->setTileOffsetX(v);
 						}
 						else if(path[4]=="y") {
-							//map->tilesetAt(i)->mTileOffset.setY(value.toInt());
-							//t_to_y=value.toInt();
+							bool ok;
+							int v=value.toInt(&ok);
+							assert(ok);
+							map->tilesetAt(i)->setTileOffsetY(v);
 						}
-						//map->tilesetAt(i)->setTileOffset(QPoint(t_to_x, t_to_y));
 					}
 				}
 			}
@@ -275,12 +282,12 @@ bool IniPlugin::write(const Tiled::Map *map, const QString &fileName)
 				out << "map.tileset." << i << ".spacing" << " = " << map->tilesetAt(i)->tileSpacing() << endl;
 				out << "map.tileset." << i << ".margin" << " = " << map->tilesetAt(i)->margin() << endl;
 				out << "map.tileset." << i << ".source" << " = " << map->tilesetAt(i)->fileName() << endl;
-				out << "map.tileset." << i << ".image.source" << " = " << map->tilesetAt(i)->imageSource() << endl;
 				out << "map.tileset." << i << ".image.trans" << " = " << map->tilesetAt(i)->transparentColor().name() << endl;
-				//out << "map.tileset." << i << ".image.width" << " = " << map->tilesetAt(i)->imageWidth() << endl;
-				//out << "map.tileset." << i << ".image.height" << " = " << map->tilesetAt(i)->imageHeight() << endl;
-				//out << "map.tileset." << i << ".tileoffset.x" << " = " << map->tilesetAt(i)->tileOffset().x() << endl;
-				//out << "map.tileset." << i << ".tileoffset.y" << " = " << map->tilesetAt(i)->tileOffset().y() << endl;
+				out << "map.tileset." << i << ".image.width" << " = " << map->tilesetAt(i)->imageWidth() << endl;
+				out << "map.tileset." << i << ".image.height" << " = " << map->tilesetAt(i)->imageHeight() << endl;
+				out << "map.tileset." << i << ".image.source" << " = " << map->tilesetAt(i)->imageSource() << endl;
+				out << "map.tileset." << i << ".tileoffset.x" << " = " << map->tilesetAt(i)->tileOffset().x() << endl;
+				out << "map.tileset." << i << ".tileoffset.y" << " = " << map->tilesetAt(i)->tileOffset().y() << endl;
 			}
 		}
 	}
