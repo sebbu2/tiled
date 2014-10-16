@@ -150,7 +150,9 @@ bool IniPlugin::process_line(Tiled::Map *map, QStringList path, QString value) {
 				}
 				if(path.size()==4) { //tileset attributes
 					if(path[3]=="firstgid") {
+						bool ok;
 						t_firstgid=value.toInt();
+						assert(ok);
 					}
 					else if(path[3]=="name") {
 						map->tilesetAt(i)->setName(value);
