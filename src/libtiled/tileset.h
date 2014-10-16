@@ -114,10 +114,20 @@ public:
      */
     bool isExternal() const { return !mFileName.isEmpty(); }
 
+		/**
+		 * Sets the maximum width of the tiles in this tileset.
+		 */
+		void setTileWidth(int tileWidth) { mTileWidth=tileWidth; }
+
     /**
      * Returns the maximum width of the tiles in this tileset.
      */
     int tileWidth() const { return mTileWidth; }
+
+		/**
+		 * Sets the maximuheight of the tiles in this tileset.
+		 */
+		void setTileHeight(int tileHeight) { mTileHeight=tileHeight; }
 
     /**
      * Returns the maximum height of the tiles in this tileset.
@@ -129,10 +139,20 @@ public:
      */
     QSize tileSize() const { return QSize(mTileWidth, mTileHeight); }
 
+		/**
+		 * Sets the spacing between the tiles in the tileset image.
+		 */
+		void setTileSpacing(int tileSpacing) { mTileSpacing=tileSpacing; }
+
     /**
      * Returns the spacing between the tiles in the tileset image.
      */
     int tileSpacing() const { return mTileSpacing; }
+
+		/**
+		 * Sets the margin around the tiles in the tileset image.
+		 */
+		void setMargin(int margin) { mMargin=margin; }
 
     /**
      * Returns the margin around the tiles in the tileset image.
@@ -149,6 +169,18 @@ public:
      * @see tileOffset
      */
     void setTileOffset(QPoint offset) { mTileOffset = offset; }
+
+		/**
+		 * Sets the offset in x position that is applied when drawing the tiles
+		 * in this tileset.
+		 */
+		void setTileOffsetX(int x) { mTileOffset.setX(x); }
+
+		/**
+		 * Sets the offset in y position that is applied when drawing the tiles
+		 * in this tileset.
+		 */
+		void setTileOffsetY(int y) { mTileOffset.setY(y); }
 
     /**
      * Returns a const reference to the list of tiles in this tileset.
@@ -172,10 +204,20 @@ public:
      */
     int columnCount() const { return mColumnCount; }
 
+		/**
+		 * Sets the width of the tileset image.
+		 */
+		void setImageWidth(int imageWidth) { mImageWidth=imageWidth; }
+
     /**
      * Returns the width of the tileset image.
      */
     int imageWidth() const { return mImageWidth; }
+
+		/**
+		 * Sets the height of the tileset image.
+		 */
+		void setImageHeight(int imageHeight) { mImageHeight=imageHeight; }
 
     /**
      * Returns the height of the tileset image.
