@@ -66,7 +66,7 @@ public:
      * @param tileSpacing the spacing between the tiles in the tileset image
      * @param margin      the margin around the tiles in the tileset image
      */
-		Tileset(const QString &name = "", int tileWidth = 0, int tileHeight = 0,
+		Tileset(const QString &name = QString(), int tileWidth = 0, int tileHeight = 0,
             int tileSpacing = 0, int margin = 0):
         Object(TilesetType),
         mName(name),

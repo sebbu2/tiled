@@ -144,7 +144,7 @@ bool IniPlugin::process_line(Tiled::Map *map, QStringList path, QString value) {
 			else if(path[1]=="tileset") {
 				assert(path.size()>=4);
 				int i=path[2].toInt();
-				while(i>map->tilesetCount()) {
+				while(i>=map->tilesetCount()) {
 					map->addTileset(new Tiled::Tileset("",0,0));
 					t_firstgid=0;
 				}
