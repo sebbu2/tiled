@@ -64,18 +64,11 @@ public:
 	QString errorString() const;
 
 private:
-	bool process_line(Tiled::Map *map, QStringList path, QString value);
+	bool processLine(Tiled::Map *map, QStringList path, QString value);
+	bool readUnknownElement(QStringList path, QString value);
 	QString mError;
 	//temporary variables
 	int t_firstgid;
-	QString t_name;
-	int t_tilewidth;
-	int t_tileheight;
-	int t_spacing;
-	int t_margin;
-	//int t_to_x;
-	//int t_to_y;
-	//*/
 };
 
 } // namespace Ini

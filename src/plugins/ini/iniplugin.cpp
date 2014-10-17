@@ -44,6 +44,7 @@
 #include "tile.h"
 #include "tilelayer.h"
 #include "tileset.h"
+#include "terrain.h"
 
 using namespace Ini;
 
@@ -76,14 +77,19 @@ Tiled::Map *IniPlugin::read(const QString &fileName)
 		value = value.trimmed();
 		QStringList path = key.split('.');
 
-		res &= process_line(map, path, value);
+		res &= processLine(map, path, value);
 		if(!res) return 0;
 	}
 
 	return map;
 }
 
-bool IniPlugin::process_line(Tiled::Map *map, QStringList path, QString value) {
+bool IniPlugin::readUnknownElement(QStringList path, QString value) {
+	mError = "Unknown element "+path.join(' ')+" with value "+value+".";
+	return 0;
+}
+
+bool IniPlugin::processLine(Tiled::Map *map, QStringList path, QString value) {
 	if(mError.size()>0) return false;
 	if(path[0]=="main") {
 		assert(path.size()==2);
@@ -130,10 +136,7 @@ bool IniPlugin::process_line(Tiled::Map *map, QStringList path, QString value) {
 			else if(path[1]=="renderorder") {
 				map->setRenderOrder(Tiled::renderOrderFromString(value));
 			}
-			else {
-				mError = "Unknown map attribute "+path[1]+" with value "+value;
-				return 0;
-			}
+			else return readUnknownElement(path, value);
 		}
 		else {
 			//content (properties, tilesets, *layers)
@@ -142,16 +145,17 @@ bool IniPlugin::process_line(Tiled::Map *map, QStringList path, QString value) {
 				map->setProperty(path[2], value);
 			}
 			else if(path[1]=="tileset") {
-				assert(path.size()>=4);
+				assert(path.size()>=4 && path.size()<=7);
 				int i=path[2].toInt();
 				while(i>=map->tilesetCount()) {
-					map->addTileset(new Tiled::Tileset("",0,0));
+					//map->addTileset(new Tiled::Tileset("",0,0));
+					map->addTileset(new Tiled::Tileset());
 					t_firstgid=0;
 				}
 				if(path.size()==4) { //tileset attributes
 					if(path[3]=="firstgid") {
 						bool ok;
-						t_firstgid=value.toInt();
+						t_firstgid=value.toInt(&ok);
 						assert(ok);
 					}
 					else if(path[3]=="name") {
@@ -184,6 +188,7 @@ bool IniPlugin::process_line(Tiled::Map *map, QStringList path, QString value) {
 					else if(path[3]=="source") {
 						map->tilesetAt(i)->setFileName(value);
 					}
+					else return readUnknownElement(path, value);
 				}
 				else if(path.size()==5) {
 					if(path[3]=="image") { //tileset image
@@ -207,8 +212,9 @@ bool IniPlugin::process_line(Tiled::Map *map, QStringList path, QString value) {
 							assert(ok);
 							map->tilesetAt(i)->setImageHeight(v);//NOTE: loadFromImage
 						}
+						else return readUnknownElement(path, value);
 					}
-					if(path[3]=="tileoffset") {
+					else if(path[3]=="tileoffset") {
 						if(path[4]=="x") {
 							bool ok;
 							int v=value.toInt(&ok);
@@ -221,8 +227,81 @@ bool IniPlugin::process_line(Tiled::Map *map, QStringList path, QString value) {
 							assert(ok);
 							map->tilesetAt(i)->setTileOffsetY(v);
 						}
+						else return readUnknownElement(path, value);
 					}
+					else if(path[3]=="properties") { //tileset properties
+						assert(path.size()==5);
+						map->tilesetAt(i)->setProperty(path[4], value);
+					}
+					else return readUnknownElement(path, value);
 				}
+				else if(path.size()==6) {
+					bool ok;
+					int i2=path[4].toInt(&ok);
+					assert(ok);
+					if(path[3]=="terraintypes") {
+						while(i2>=map->tilesetAt(i)->terrainCount()) {
+							map->tilesetAt(i)->addTerrain("",0);
+						}
+						for(int a=0;a<map->tilesetAt(i)->terrainCount();++a) {
+							map->tilesetAt(i)->terrain(a)->setId(a);
+						}
+						if(path[5]=="name") {
+								map->tilesetAt(i)->terrain(i2)->setName(value);
+							}
+						else if(path[5]=="tid") {
+								bool ok;
+								int v=value.toInt(&ok);
+								assert(ok);
+								map->tilesetAt(i)->terrain(i2)->setImageTileId(v);
+							}
+						else return readUnknownElement(path, value);
+					}
+					else if(path[3]=="tile") {
+						if(path[5]=="terrain") {
+							QStringList quadrants = value.split(QLatin1String(","));
+							if (quadrants.size() == 4) {
+								for (int a = 0; a < 4; ++a) {
+									int t = quadrants[a].isEmpty() ? -1 : quadrants[a].toInt();
+									map->tilesetAt(i)->tileAt(i2)->setCornerTerrain(i, t);
+								}
+							}
+						}
+						else if(path[5]=="probability") {
+							bool ok;
+							float v=value.toFloat(&ok);
+							assert(ok);
+							map->tilesetAt(i)->tileAt(i2)->setTerrainProbability(v);
+						}
+						else return readUnknownElement(path, value);
+					}
+					else return readUnknownElement(path, value);
+				}
+				else if(path.size()==7) { //map tileset (terraintype|tile) properties
+					bool ok;
+					int i2=path[4].toInt(&ok);
+					assert(ok);
+					if(path[3]=="terraintype") { // map tileset terraintype properties
+						while(i2>=map->tilesetAt(i)->terrainCount()) {
+							map->tilesetAt(i)->addTerrain("",0);
+						}
+						for(int a=0;a<map->tilesetAt(i)->terrainCount();++a) {
+							map->tilesetAt(i)->terrain(a)->setId(a);
+						}
+						if(path[5]=="properties") {
+							map->tilesetAt(i)->terrain(i2)->setProperty(path[6], value);
+						}
+						else return readUnknownElement(path, value);
+					}
+					else if(path[3]=="tile") { //map tileset tile properties
+						if(path[5]=="properties") {
+							map->tilesetAt(i)->tileAt(i2)->setProperty(path[6], value);
+						}
+						else return readUnknownElement(path, value);
+					}
+					else return readUnknownElement(path, value);
+				}
+				else return readUnknownElement(path, value);
 			}
 			else if(path[1]=="layer") {
 				//
@@ -233,11 +312,7 @@ bool IniPlugin::process_line(Tiled::Map *map, QStringList path, QString value) {
 			else if(path[1]=="imagelayer") {
 				//
 			}
-			else {
-				mError="Unknown map node/attribute ";
-				mError += value;
-				return 0;
-			}
+			else return readUnknownElement(path, value);
 		}
 	}
 	return true;
@@ -290,6 +365,39 @@ bool IniPlugin::write(const Tiled::Map *map, const QString &fileName)
 				out << "map.tileset." << i << ".image.source" << " = " << map->tilesetAt(i)->imageSource() << endl;
 				out << "map.tileset." << i << ".tileoffset.x" << " = " << map->tilesetAt(i)->tileOffset().x() << endl;
 				out << "map.tileset." << i << ".tileoffset.y" << " = " << map->tilesetAt(i)->tileOffset().y() << endl;
+				if(!map->tilesetAt(i)->properties().empty()) { //tileset properties
+					Tiled::Properties::const_iterator end=map->tilesetAt(i)->properties().constEnd();
+					for(Tiled::Properties::const_iterator it=map->tilesetAt(i)->properties().constBegin();it!=end;++it) {
+						out << "map.tileset." << i << ".properties." << it.key() << " = " << it.value() << endl;
+					}
+				}
+				if(map->tilesetAt(i)->terrainCount()>0) {
+					for(int i2=0;i2<map->tilesetAt(i)->terrainCount();++i2) {
+						out << "map.tileset." << i << ".terrain." << i2 << ".name" << " = " << map->tilesetAt(i)->terrain(i2)->name() << endl;
+						out << "map.tileset." << i << ".terrain." << i2 << ".tid" << " = " << map->tilesetAt(i)->terrain(i2)->imageTileId() << endl;
+						if(!map->tilesetAt(i)->terrain(i2)->properties().empty()) { //terrain properties
+							Tiled::Properties::const_iterator end=map->tilesetAt(i)->terrain(i2)->properties().constEnd();
+							for(Tiled::Properties::const_iterator it=map->tilesetAt(i)->terrain(i2)->properties().constBegin();it!=end;++it) {
+								out << "map.tileset." << i << ".terrain." << i2 << ".properties." << it.key() << " = " << it.value() << endl;
+							}
+						}
+					}
+				}
+				if(map->tilesetAt(i)->tileCount()>0) {
+					for(int i2=0;i2<map->tilesetAt(i)->tileCount();++i2) {
+						Tiled::Tile* t=map->tilesetAt(i)->tileAt(i2);
+						if(t->terrain()!=-1) {
+							out << "map.tileset." << i << ".tile." << i2 << ".terrain" << " = " << t->terrain() << endl;
+							out << "map.tileset." << i << ".tile." << i2 << ".probability" << " = " << t->terrainProbability() << endl;
+						}
+						if(!map->tilesetAt(i)->tileAt(i2)->properties().empty()) { //tile properties
+							Tiled::Properties::const_iterator end=map->tilesetAt(i)->tileAt(i2)->properties().constEnd();
+							for(Tiled::Properties::const_iterator it=map->tilesetAt(i)->tileAt(i2)->properties().constBegin();it!=end;++it) {
+								out << "map.tileset." << i << ".tile." << i2 << ".properties." << it.key() << " = " << it.value() << endl;
+							}
+						}
+					}
+				}
 			}
 		}
 	}
