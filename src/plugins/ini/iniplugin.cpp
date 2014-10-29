@@ -136,7 +136,11 @@ bool IniPlugin::processLayer(Tiled::Map *map, QStringList path, int i, QString v
 }
 
 Tiled::Cell IniPlugin::cellFromGID(Tiled::Map *map, QString value) {
+	if(value=="0") {
+		return Tiled::Cell();
+	}
 	QStringList t = value.split(',');
+	assert(t.size()==3);
 	bool ok;
 	const int tid=t[0].toInt(&ok);
 	assert(ok);
@@ -384,7 +388,15 @@ bool IniPlugin::processLine(Tiled::Map *map, QStringList path, QString value) {
 				}
 				if(path.size()==4) { //tilelayer attribute
 					bool l=processLayer(map, path, i, value);
-					if(l) {}
+					if(l) {
+						if(path[3]=="width"||path[3]=="height") {
+							if(map->layerAt(i)->width() * map->layerAt(i)->height() > 0) {
+								int w=map->layerAt(i)->width(),h=map->layerAt(i)->height();
+								map->layerAt(i)->setSize(QSize(0,0));
+								map->layerAt(i)->asTileLayer()->resize(QSize(w, h), QPoint(0, 0));
+							}
+						}
+					}
 					else if(path[3]=="encoding") {
 							//TODO: ??
 					}
