@@ -1,5 +1,5 @@
 /*
- * JSON Tiled Plugin
+ * INI Tiled Plugin
  * Copyright 2011, Porfírio José Pereira Ribeiro <porfirioribeiro@gmail.com>
  * Copyright 2011, Thorbjørn Lindeijer <thorbjorn@lindeijer.nl>
  *
@@ -95,7 +95,7 @@ bool IniPlugin::processLayer(Tiled::Map *map, QStringList path, int i, QString v
 	}
 	else if(path[3]=="opacity") {
 		bool ok;
-		short v=value.toShort(&ok);
+		float v=value.toFloat(&ok);
 		assert(v>=0&&v<=1);
 		assert(ok);
 		map->layerAt(i)->setOpacity(v);
@@ -133,6 +133,25 @@ bool IniPlugin::processLayer(Tiled::Map *map, QStringList path, int i, QString v
 	}
 	else return false;
 	return true;
+}
+
+Tiled::Cell IniPlugin::cellFromGID(Tiled::Map *map, QString value) {
+	QStringList t = value.split(',');
+	bool ok;
+	const int tid=t[0].toInt(&ok);
+	assert(ok);
+	assert(tid<map->tilesetCount());
+	const int lid=t[1].toInt(&ok);
+	assert(ok);
+	assert(lid<map->tilesetAt(tid)->tileCount());
+	const int flips=t[2].toInt(&ok);
+	assert(ok);
+	assert(flips>=0 && flips<=7);
+	Tiled::Cell c=Tiled::Cell(map->tilesetAt(tid)->tileAt(lid));
+	c.flippedHorizontally=(flips>>2);
+	c.flippedVertically=(flips>>1 & 0x1);
+	c.flippedAntiDiagonally=(flips & 0x1);
+	return c;
 }
 
 bool IniPlugin::processLine(Tiled::Map *map, QStringList path, QString value) {
@@ -192,7 +211,9 @@ bool IniPlugin::processLine(Tiled::Map *map, QStringList path, QString value) {
 			}
 			else if(path[1]=="tileset") {
 				assert(path.size()>=4 && path.size()<=7);
-				int i=path[2].toInt();
+				bool ok;
+				int i=path[2].toInt(&ok);
+				assert(ok);
 				while(i>=map->tilesetCount()) {
 					//map->addTileset(new Tiled::Tileset("",0,0));
 					map->addTileset(new Tiled::Tileset());
@@ -351,7 +372,9 @@ bool IniPlugin::processLine(Tiled::Map *map, QStringList path, QString value) {
 			}
 			else if(path[1]=="layer"||path[1]=="tilelayer") {
 				assert(path.size()>=4 && path.size()<=6);
-				int i=path[2].toInt();
+				bool ok;
+				int i=path[2].toInt(&ok);
+				assert(ok);
 				while(i>=map->layerCount()) {
 					map->addLayer(new Tiled::TileLayer("",0,0,0,0));
 				}
@@ -371,33 +394,22 @@ bool IniPlugin::processLine(Tiled::Map *map, QStringList path, QString value) {
 					else return readUnknownElement(path, value);
 				}
 				else if(path.size()==6) { //layer data
-					assert(path[4]=="tile");
-					QStringList t = value.split(',');
+					assert(path[3]=="tile");
 					bool ok;
-					const int y=path[5].toInt(&ok);
+					const int y=path[4].toInt(&ok);
 					assert(ok);
-					const int x=path[6].toInt(&ok);
+					const int x=path[5].toInt(&ok);
 					assert(ok);
-					const int tid=t[0].toInt(&ok);
-					assert(ok);
-					assert(tid<map->tilesetCount());
-					const int lid=t[1].toInt(&ok);
-					assert(ok);
-					assert(lid<map->tilesetAt(tid)->tileCount());
-					const int flips=t[2].toInt(&ok);
-					assert(ok);
-					assert(flips>=0 && flips<=7);
-					Tiled::Cell c=Tiled::Cell(map->tilesetAt(tid)->tileAt(lid));
-					c.flippedHorizontally=(flips>>2);
-					c.flippedVertically=(flips>>1 & 0x1);
-					c.flippedAntiDiagonally=(flips & 0x1);
+					Tiled::Cell c=cellFromGID(map, value);
 					map->layerAt(i)->asTileLayer()->setCell(x, y, c);
 				}
 				else return readUnknownElement(path, value);
 			}
 			else if(path[1]=="objectgroup"||path[1]=="objectlayer") {
 				assert(path.size()>=4 && path.size()<=6);
-				int i=path[2].toInt();
+				bool ok;
+				int i=path[2].toInt(&ok);
+				assert(ok);
 				while(i>=map->layerCount()) {
 					map->addLayer(new Tiled::ObjectGroup("",0,0,0,0));
 				}
@@ -408,9 +420,62 @@ bool IniPlugin::processLine(Tiled::Map *map, QStringList path, QString value) {
 				if(path.size()==4) { //objectlayer attribute
 					bool l=processLayer(map, path, i, value);
 					if(l) {}
+					else if(path[3]=="color") {
+						QColor v(value);
+						assert(v.isValid());
+						map->layerAt(i)->asObjectGroup()->setColor(v);
+					}
 					else return readUnknownElement(path, value);
 				}
-				return readUnknownElement(path, value);
+				else if(path.size()==6) { //objects
+					assert(path[3]=="object");
+					int i2=path[4].toInt(&ok);
+					assert(ok);
+					while(i2>=map->layerAt(i)->asObjectGroup()->objectCount()) {
+						map->layerAt(i)->asObjectGroup()->addObject(new Tiled::MapObject());
+					}
+					if(path[5]=="name") {
+						map->layerAt(i)->asObjectGroup()->objectAt(i2)->setName(value);
+					}
+					else if(path[5]=="type") {
+						map->layerAt(i)->asObjectGroup()->objectAt(i2)->setType(value);
+					}
+					else if(path[5]=="x") {
+						bool ok;
+						int v=value.toInt(&ok);
+						assert(ok);
+						map->layerAt(i)->asObjectGroup()->objectAt(i2)->setX(v);
+					}
+					else if(path[5]=="y") {
+						bool ok;
+						int v=value.toInt(&ok);
+						assert(ok);
+						map->layerAt(i)->asObjectGroup()->objectAt(i2)->setY(v);
+					}
+					else if(path[5]=="width") {
+						bool ok;
+						int v=value.toInt(&ok);
+						assert(ok);
+						map->layerAt(i)->asObjectGroup()->objectAt(i2)->setWidth(v);
+					}
+					else if(path[5]=="height") {
+						bool ok;
+						int v=value.toInt(&ok);
+						assert(ok);
+						map->layerAt(i)->asObjectGroup()->objectAt(i2)->setHeight(v);
+					}
+					else if(path[5]=="visible") {
+						bool ok;
+						int v=value.toInt(&ok);
+						assert(ok);
+						map->layerAt(i)->asObjectGroup()->objectAt(i2)->setVisible(v);
+					}
+					else if(path[5]=="gid") {
+						Tiled::Cell c=cellFromGID(map, value);
+						map->layerAt(i)->asObjectGroup()->objectAt(i2)->setCell(c);
+					}
+				}
+				else return readUnknownElement(path, value);
 			}
 			else if(path[1]=="imagelayer") {
 				//
@@ -426,9 +491,17 @@ bool IniPlugin::processLine(Tiled::Map *map, QStringList path, QString value) {
 				if(path.size()==4) { //imagelayer attribute
 					bool l=processLayer(map, path, i, value);
 					if(l) {}
+					else if(path[3]=="source") {
+						map->layerAt(i)->asImageLayer()->setSource(value);
+					}
+					else if(path[3]=="trans") {
+						QColor v(value);
+						assert(v.isValid());
+						map->layerAt(i)->asImageLayer()->setTransparentColor(v);
+					}
 					else return readUnknownElement(path, value);
 				}
-				return readUnknownElement(path, value);
+				else return readUnknownElement(path, value);
 			}
 			else return readUnknownElement(path, value);
 		}
@@ -556,6 +629,9 @@ bool IniPlugin::write(const Tiled::Map *map, const QString &fileName)
 				}
 				else if(map->layerAt(i)->layerType()==Tiled::Layer::ObjectGroupType) {
 					//
+					if(map->layerAt(i)->asObjectGroup()->color().isValid()) {
+						out << "map."<<type<<"layer." << i << ".width" << " = " << map->layerAt(i)->asObjectGroup()->color().name() << endl;
+					}
 					for(int j=0;j<map->layerAt(i)->asObjectGroup()->objectCount();++j) {
 						out << "map."<<type<<"layer." << i << ".object." << j << ".name" << " = " << map->layerAt(i)->asObjectGroup()->objectAt(j)->name() << endl;
 						out << "map."<<type<<"layer." << i << ".object." << j << ".x" << " = " << map->layerAt(i)->asObjectGroup()->objectAt(j)->x() << endl;

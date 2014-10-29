@@ -31,6 +31,7 @@
 
 namespace Tiled {
 class Map;
+class Cell;
 }
 
 namespace Ini {
@@ -65,6 +66,7 @@ public:
 
 private:
 	bool processLayer(Tiled::Map *map, QStringList path, int i, QString value);
+	Tiled::Cell cellFromGID(Tiled::Map *map, QString value);
 	bool processLine(Tiled::Map *map, QStringList path, QString value);
 	bool readUnknownElement(QStringList path, QString value);
 	QString mError;
