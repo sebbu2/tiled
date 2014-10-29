@@ -89,12 +89,58 @@ bool IniPlugin::readUnknownElement(QStringList path, QString value) {
 	return 0;
 }
 
+bool IniPlugin::processLayer(Tiled::Map *map, QStringList path, int i, QString value) {
+	if(path[3]=="name") {
+		map->layerAt(i)->setName(value);
+	}
+	else if(path[3]=="opacity") {
+		bool ok;
+		short v=value.toShort(&ok);
+		assert(v>=0&&v<=1);
+		assert(ok);
+		map->layerAt(i)->setOpacity(v);
+	}
+	else if(path[3]=="visible") {
+		bool ok;
+		short v=value.toShort(&ok);
+		assert(v>=0&&v<=1);
+		assert(ok);
+		map->layerAt(i)->setVisible(v);
+	}
+	else if(path[3]=="x") {
+		bool ok;
+		int v=value.toInt(&ok);
+		assert(ok);
+		map->layerAt(i)->setX(v);
+	}
+	else if(path[3]=="y") {
+		bool ok;
+		int v=value.toInt(&ok);
+		assert(ok);
+		map->layerAt(i)->setY(v);
+	}
+	else if(path[3]=="width") {
+		bool ok;
+		int v=value.toInt(&ok);
+		assert(ok);
+		map->layerAt(i)->setWidth(v);
+	}
+	else if(path[3]=="height") {
+		bool ok;
+		int v=value.toInt(&ok);
+		assert(ok);
+		map->layerAt(i)->setHeight(v);
+	}
+	else return false;
+	return true;
+}
+
 bool IniPlugin::processLine(Tiled::Map *map, QStringList path, QString value) {
 	if(mError.size()>0) return false;
 	if(path[0]=="main") {
 		assert(path.size()==2);
 		assert(path[1]=="version");
-		assert(value=="0.0.1");
+		assert(value=="0.0.1"||value=="0.0.2");
 	}
 	else if(path[0]=="map") {
 		if(path.size()==2) { //map attributes
@@ -303,14 +349,86 @@ bool IniPlugin::processLine(Tiled::Map *map, QStringList path, QString value) {
 				}
 				else return readUnknownElement(path, value);
 			}
-			else if(path[1]=="layer") {
-				//
+			else if(path[1]=="layer"||path[1]=="tilelayer") {
+				assert(path.size()>=4 && path.size()<=6);
+				int i=path[2].toInt();
+				while(i>=map->layerCount()) {
+					map->addLayer(new Tiled::TileLayer("",0,0,0,0));
+				}
+				if(!map->layerAt(i)->isTileLayer()) {
+					map->takeLayerAt(i);
+					map->insertLayer(i,new Tiled::TileLayer("",0,0,0,0));
+				}
+				if(path.size()==4) { //tilelayer attribute
+					bool l=processLayer(map, path, i, value);
+					if(l) {}
+					else if(path[3]=="encoding") {
+							//TODO: ??
+					}
+					else if(path[3]=="compression") {
+						//TODO: ??
+					}
+					else return readUnknownElement(path, value);
+				}
+				else if(path.size()==6) { //layer data
+					assert(path[4]=="tile");
+					QStringList t = value.split(',');
+					bool ok;
+					const int y=path[5].toInt(&ok);
+					assert(ok);
+					const int x=path[6].toInt(&ok);
+					assert(ok);
+					const int tid=t[0].toInt(&ok);
+					assert(ok);
+					assert(tid<map->tilesetCount());
+					const int lid=t[1].toInt(&ok);
+					assert(ok);
+					assert(lid<map->tilesetAt(tid)->tileCount());
+					const int flips=t[2].toInt(&ok);
+					assert(ok);
+					assert(flips>=0 && flips<=7);
+					Tiled::Cell c=Tiled::Cell(map->tilesetAt(tid)->tileAt(lid));
+					c.flippedHorizontally=(flips>>2);
+					c.flippedVertically=(flips>>1 & 0x1);
+					c.flippedAntiDiagonally=(flips & 0x1);
+					map->layerAt(i)->asTileLayer()->setCell(x, y, c);
+				}
+				else return readUnknownElement(path, value);
 			}
-			else if(path[1]=="objectgroup") {
-				//
+			else if(path[1]=="objectgroup"||path[1]=="objectlayer") {
+				assert(path.size()>=4 && path.size()<=6);
+				int i=path[2].toInt();
+				while(i>=map->layerCount()) {
+					map->addLayer(new Tiled::ObjectGroup("",0,0,0,0));
+				}
+				if(!map->layerAt(i)->isObjectGroup()) {
+					map->takeLayerAt(i);
+					map->insertLayer(i,new Tiled::ObjectGroup("",0,0,0,0));
+				}
+				if(path.size()==4) { //objectlayer attribute
+					bool l=processLayer(map, path, i, value);
+					if(l) {}
+					else return readUnknownElement(path, value);
+				}
+				return readUnknownElement(path, value);
 			}
 			else if(path[1]=="imagelayer") {
 				//
+				assert(path.size()==4);
+				int i=path[2].toInt();
+				while(i>=map->layerCount()) {
+					map->addLayer(new Tiled::ImageLayer("",0,0,0,0));
+				}
+				if(!map->layerAt(i)->isImageLayer()) {
+					map->takeLayerAt(i);
+					map->insertLayer(i,new Tiled::ImageLayer("",0,0,0,0));
+				}
+				if(path.size()==4) { //imagelayer attribute
+					bool l=processLayer(map, path, i, value);
+					if(l) {}
+					else return readUnknownElement(path, value);
+				}
+				return readUnknownElement(path, value);
 			}
 			else return readUnknownElement(path, value);
 		}
@@ -331,7 +449,7 @@ bool IniPlugin::write(const Tiled::Map *map, const QString &fileName)
 	}
 	QTextStream out(&file);
 	if(true) { //write content
-		out << "main.version = 0.0.1\n";
+		out << "main.version = 0.0.2\n";
 		if(true) { //map attributes
 			out << "map.version = 1.0\n";
 			out << "map.orientation" << " = " << Tiled::orientationToString(map->orientation()) << endl;
@@ -351,7 +469,7 @@ bool IniPlugin::write(const Tiled::Map *map, const QString &fileName)
 				out << "map.properties." << it.key() << " = " << it.value() << endl;
 			}
 		}
-		if(map->tilesetCount()>0) {
+		if(map->tilesetCount()>0) { //tilesets
 			for(int i=0;i<map->tilesetCount();++i) {
 				out << "map.tileset." << i << ".name" << " = " << map->tilesetAt(i)->name() << endl;
 				out << "map.tileset." << i << ".tilewidth" << " = " << map->tilesetAt(i)->tileWidth() << endl;
@@ -371,7 +489,7 @@ bool IniPlugin::write(const Tiled::Map *map, const QString &fileName)
 						out << "map.tileset." << i << ".properties." << it.key() << " = " << it.value() << endl;
 					}
 				}
-				if(map->tilesetAt(i)->terrainCount()>0) {
+				if(map->tilesetAt(i)->terrainCount()>0) { //tileset terrain
 					for(int i2=0;i2<map->tilesetAt(i)->terrainCount();++i2) {
 						out << "map.tileset." << i << ".terrain." << i2 << ".name" << " = " << map->tilesetAt(i)->terrain(i2)->name() << endl;
 						out << "map.tileset." << i << ".terrain." << i2 << ".tid" << " = " << map->tilesetAt(i)->terrain(i2)->imageTileId() << endl;
@@ -383,10 +501,10 @@ bool IniPlugin::write(const Tiled::Map *map, const QString &fileName)
 						}
 					}
 				}
-				if(map->tilesetAt(i)->tileCount()>0) {
+				if(map->tilesetAt(i)->tileCount()>0) { //tileset tile
 					for(int i2=0;i2<map->tilesetAt(i)->tileCount();++i2) {
 						Tiled::Tile* t=map->tilesetAt(i)->tileAt(i2);
-						if(t->terrain()!=-1) {
+						if(t->terrain()!=-1) { //tile terrain
 							out << "map.tileset." << i << ".tile." << i2 << ".terrain" << " = " << t->terrain() << endl;
 							out << "map.tileset." << i << ".tile." << i2 << ".probability" << " = " << t->terrainProbability() << endl;
 						}
@@ -398,6 +516,62 @@ bool IniPlugin::write(const Tiled::Map *map, const QString &fileName)
 						}
 					}
 				}
+			}
+		}
+		if(map->layerCount()>0) { //layers
+			for(int i=0;i<map->layerCount();++i) {
+				QString type;
+				if(map->layerAt(i)->layerType()==Tiled::Layer::TileLayerType) type="tile";
+				else if(map->layerAt(i)->layerType()==Tiled::Layer::ImageLayerType) type="image";
+				else if(map->layerAt(i)->layerType()==Tiled::Layer::ObjectGroupType) type="object";
+				else return false;
+				out << "map."<<type<<"layer." << i << ".name" << " = " << map->layerAt(i)->name() << endl;
+				out << "map."<<type<<"layer." << i << ".opacity" << " = " << map->layerAt(i)->opacity() << endl;
+				out << "map."<<type<<"layer." << i << ".visible" << " = " << (map->layerAt(i)->isVisible()?1:0) << endl;
+				out << "map."<<type<<"layer." << i << ".x" << " = " << map->layerAt(i)->x() << endl;
+				out << "map."<<type<<"layer." << i << ".y" << " = " << map->layerAt(i)->y() << endl;
+				out << "map."<<type<<"layer." << i << ".width" << " = " << map->layerAt(i)->width() << endl;
+				out << "map."<<type<<"layer." << i << ".height" << " = " << map->layerAt(i)->height() << endl;
+				if(map->layerAt(i)->layerType()==Tiled::Layer::TileLayerType) {
+					//
+					for(int y=0;y<map->layerAt(i)->height();++y) {
+						for(int x=0;x<map->layerAt(i)->width();++x) {
+							const Tiled::Cell& c=map->layerAt(i)->asTileLayer()->cellAt(QPoint(x, y));
+							if(c.isEmpty()) {
+								out << "map."<<type<<"layer." << i << ".tile." << y << "." << x << " = " << "0" << endl;
+							}
+							else {
+								out << "map."<<type<<"layer." << i << ".tile." << y << "." << x << " = " <<
+											 map->indexOfTileset(c.tile->tileset()) << "," << c.tile->id() << "," <<
+											 (c.flippedHorizontally<<2|c.flippedVertically<<1|c.flippedAntiDiagonally)
+										<< endl;
+							}
+						}
+					}
+				}
+				else if(map->layerAt(i)->layerType()==Tiled::Layer::ImageLayerType) {
+					//
+					out << "map."<<type<<"layer." << i << ".source" << " = " << map->layerAt(i)->asImageLayer()->imageSource() << endl;
+					out << "map."<<type<<"layer." << i << ".trans" << " = " << map->layerAt(i)->asImageLayer()->transparentColor().name() << endl;
+				}
+				else if(map->layerAt(i)->layerType()==Tiled::Layer::ObjectGroupType) {
+					//
+					for(int j=0;j<map->layerAt(i)->asObjectGroup()->objectCount();++j) {
+						out << "map."<<type<<"layer." << i << ".object." << j << ".name" << " = " << map->layerAt(i)->asObjectGroup()->objectAt(j)->name() << endl;
+						out << "map."<<type<<"layer." << i << ".object." << j << ".x" << " = " << map->layerAt(i)->asObjectGroup()->objectAt(j)->x() << endl;
+						out << "map."<<type<<"layer." << i << ".object." << j << ".y" << " = " << map->layerAt(i)->asObjectGroup()->objectAt(j)->y() << endl;
+						out << "map."<<type<<"layer." << i << ".object." << j << ".width" << " = " << map->layerAt(i)->asObjectGroup()->objectAt(j)->width() << endl;
+						out << "map."<<type<<"layer." << i << ".object." << j << ".height" << " = " << map->layerAt(i)->asObjectGroup()->objectAt(j)->height() << endl;
+						const Tiled::Cell& c=map->layerAt(i)->asObjectGroup()->objectAt(j)->cell();
+						if(!c.isEmpty()) {
+							out << "map."<<type<<"layer." << i << ".object." << j << ".gid" << " = " <<
+										 map->indexOfTileset(c.tile->tileset()) << "," <<
+										 c.tile->id() << "," <<
+										 (c.flippedHorizontally<<2|c.flippedVertically<<1|c.flippedAntiDiagonally) << endl;
+						}
+					}
+				}
+				else return false;
 			}
 		}
 	}

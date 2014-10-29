@@ -64,6 +64,7 @@ public:
 	QString errorString() const;
 
 private:
+	bool processLayer(Tiled::Map *map, QStringList path, int i, QString value);
 	bool processLine(Tiled::Map *map, QStringList path, QString value);
 	bool readUnknownElement(QStringList path, QString value);
 	QString mError;
