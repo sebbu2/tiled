@@ -148,10 +148,20 @@ public:
      */
     int width() const { return mWidth; }
 
+		/**
+		 * Sets the width of this layer.
+		 */
+		void setWidth(int w) { mWidth = w; }
+
     /**
      * Returns the height of this layer.
      */
     int height() const { return mHeight; }
+
+		/**
+		 * Sets the height of this layer.
+		 */
+		void setHeight(int h) { mHeight = h; }
 
     /**
      * Returns the size of this layer.
