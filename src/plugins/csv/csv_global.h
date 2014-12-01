@@ -1,6 +1,6 @@
 /*
- * Droidcraft Tiled Plugin
- * Copyright 2011, seeseekey <seeseekey@googlemail.com>
+ * CSV Tiled Plugin
+ * Copyright 2014, Thorbjørn Lindeijer <thorbjorn@lindeijer.nl>
  *
  * This file is part of Tiled.
  *
@@ -18,15 +18,15 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef DROIDCRAFT_GLOBAL_H
-#define DROIDCRAFT_GLOBAL_H
+#ifndef CSV_GLOBAL_H
+#define CSV_GLOBAL_H
 
 #include <QtCore/qglobal.h>
 
-#if defined(DROIDCRAFT_LIBRARY)
-#  define DROIDCRAFTSHARED_EXPORT Q_DECL_EXPORT
+#if defined(CSV_LIBRARY)
+#  define CSVSHARED_EXPORT Q_DECL_EXPORT
 #else
-#  define DROIDCRAFTSHARED_EXPORT Q_DECL_IMPORT
+#  define CSVSHARED_EXPORT Q_DECL_IMPORT
 #endif
 
-#endif // DROIDCRAFT_GLOBAL_H
+#endif // CSV_GLOBAL_H
